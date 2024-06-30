@@ -3,5 +3,13 @@ name = "this_is_a_game_maybe"
 version = "0.1.0"
 edition = "2021"
 
+# small opt on code
+[profile.dev]
+opt-level = 1
+
+# runs dependencies in release mode 
+[profile.dev.package."*"]
+opt-level = 3
+
 [dependencies]
 bevy = "0.13.2"
