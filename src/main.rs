@@ -70,6 +70,16 @@ fn tower_shooting(
         if tower.shooting_timer.just_finished() {
             let spawn_transform =
                 Transform::from_xyz(0.0, 0.7, 0.6).with_rotation(Quat::from_rotation_y(-PI / 2.0));
+
+            commands.spawn((
+                PbrBundle {
+                    mesh: meshes.add(Cuboid::new(0.1, 0.1, 0.1)),
+                    material: materials.add(Color::srgb(1.0, 0.0, 1.0)),
+                    transform: spawn_transform,
+                    ..Default::default()
+                },
+                Name::new("Bullet"),
+            ));
         }
     }
 }
