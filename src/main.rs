@@ -1,6 +1,9 @@
 use std::f32::consts::PI;
 
-use bevy::{ecs::system::EntityCommands, prelude::*};
+use bevy::{
+    ecs::{entity, reflect, system::EntityCommands},
+    prelude::*,
+};
 
 fn main() {
     // bevy general
@@ -9,8 +12,11 @@ fn main() {
             DefaultPlugins,
             bevy_inspector_egui::quick::WorldInspectorPlugin::default(),
         ))
-        .add_systems(Startup, (spawn_camera, spawn_basic_scene, print_time))
-        .add_systems(Update, tower_shooting)
+        .add_systems(
+            Startup,
+            (spawn_camera, spawn_basic_scene, print_time, asset_loading),
+        )
+        .add_systems(Update, (tower_shooting, bullet_despawn))
         .run();
 }
 
@@ -60,8 +66,7 @@ fn print_time(time: Res<Time>) {
 
 fn tower_shooting(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    bullet_assets: Res<GameAssets>,
     mut towers: Query<&mut Tower>,
     time: Res<Time>,
 ) {
@@ -72,11 +77,13 @@ fn tower_shooting(
                 Transform::from_xyz(0.0, 0.7, 0.6).with_rotation(Quat::from_rotation_y(-PI / 2.0));
 
             commands.spawn((
-                PbrBundle {
-                    mesh: meshes.add(Cuboid::new(0.1, 0.1, 0.1)),
-                    material: materials.add(Color::srgb(1.0, 0.0, 1.0)),
+                SceneBundle {
+                    scene: bullet_assets.bullet_scene.clone_weak(),
                     transform: spawn_transform,
                     ..Default::default()
+                },
+                Lifetime {
+                    timer: Timer::from_seconds(0.5, TimerMode::Once),
                 },
                 Name::new("Bullet"),
             ));
@@ -84,7 +91,37 @@ fn tower_shooting(
     }
 }
 
+fn bullet_despawn(
+    mut commands: Commands,
+    mut bullets: Query<(Entity, &mut Lifetime)>,
+    time: Res<Time>,
+) {
+    for (entity, mut lifetime) in &mut bullets {
+        lifetime.timer.tick(time.delta());
+        if lifetime.timer.just_finished() {
+            commands.entity(entity).despawn_recursive()
+        }
+    }
+}
+
+fn asset_loading(mut commands: Commands, assets: Res<AssetServer>) {
+    commands.insert_resource(GameAssets {
+        bullet_scene: assets.load(GltfAssetLabel::Scene(0).from_asset("bullet.glb")),
+    });
+}
+
 #[derive(Component)]
 pub struct Tower {
     shooting_timer: Timer,
+}
+
+#[derive(Reflect, Component, Default)]
+#[reflect(Component)]
+pub struct Lifetime {
+    timer: Timer,
+}
+
+#[derive(Resource)]
+pub struct GameAssets {
+    bullet_scene: Handle<Scene>,
 }
